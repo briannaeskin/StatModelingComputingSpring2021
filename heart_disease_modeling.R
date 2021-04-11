@@ -24,7 +24,7 @@ heart_disease_test_pred <- heart_disease_test %>%
   mutate(accurate=1*(predict==DEATH_EVENT))
 sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
 
-#Second check, logistic regression with AIC
+#Second check, logistic regression with BIC
 heart_disease_train_AIC <- regsubsets(DEATH_EVENT ~ ., data=heart_disease_train)
 heart_disease_train_AIC_sum <- summary(heart_disease_train_AIC)
 heart_disease_train_AIC_sum$which
