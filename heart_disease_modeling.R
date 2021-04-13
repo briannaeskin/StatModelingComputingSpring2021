@@ -9,7 +9,7 @@ set.seed(1234)
 heart_disease <- read.csv("https://raw.githubusercontent.com/briannaeskin/StatModelingComputingSpring2021/main/heart_failure_clinical_records_dataset.csv", 
                           header=TRUE)
 
-trainIndex <- createDataPartition(heart_disease$DEATH_EVENT, p=0.7, list=FALSE, times=1)
+trainIndex <- createDataPartition(heart_disease$DEATH_EVENT, p=0.75, list=FALSE, times=1)
 
 heart_disease_train <- heart_disease[trainIndex,]
 heart_disease_test <- heart_disease[-trainIndex,]
@@ -24,13 +24,15 @@ heart_disease_test_pred <- heart_disease_test %>%
   mutate(accurate=1*(predict==DEATH_EVENT))
 sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
 
-#Second check, logistic regression with BIC
+#Second check, logistic regression with AIC
 heart_disease_train_AIC <- regsubsets(DEATH_EVENT ~ ., data=heart_disease_train)
 heart_disease_train_AIC_sum <- summary(heart_disease_train_AIC)
 heart_disease_train_AIC_sum$which
-plot(heart_disease_train_AIC_sum$bic, main='BIC')
+AIC <- 210*log(heart_disease_train_AIC_sum$rss/210)+(2:12)*2
+plot(AIC ~ I(1:11), ylab="AIC", xlab="Number of Predictors")
+which.min(AIC)
 
-lmod_filtered <- glm(DEATH_EVENT ~ ejection_fraction + serum_creatinine + time,
+lmod_filtered <- glm(DEATH_EVENT ~ age + creatinine_phosphokinase + ejection_fraction + serum_creatinine + serum_sodium + time,
                      family=binomial, heart_disease_train)
 summary(lmod_filtered)
 
