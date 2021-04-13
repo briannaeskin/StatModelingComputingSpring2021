@@ -41,3 +41,12 @@ heart_disease_test_pred <- heart_disease_test %>%
   mutate(predict=1*(lmod_filtered_prob > 0.5)) %>%
   mutate(accurate=1*(predict==DEATH_EVENT))
 sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
+
+confusion_matrix_filtered <- as.data.frame(table(heart_disease_test_pred$DEATH_EVENT,heart_disease_test_pred$predict))
+ggplot(data=confusion_matrix_filtered, mapping=aes(x=Var1,y=Var2)) +
+  geom_tile(aes(fill=Freq), color = "white") +
+  geom_text(aes(label=sprintf("%1.0f", Freq)), vjust=1) +
+  scale_fill_gradient(low="blue", high="red") +
+  theme_bw() + theme(legend.position="none") +
+  xlab("Predicted") + ylab("Actual") + ggtitle("Predicted versus Actual")
+  
