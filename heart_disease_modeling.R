@@ -1,15 +1,17 @@
 install.packages("caret")
+install.packages("InformationValue")
 library("caret")
+library("InformationValue")
 library("leaps")
 library("tidyverse")
 
-set.seed(1234)
+set.seed(9999)
 
 #Data initialization and split to train/test
 heart_disease <- read.csv("https://raw.githubusercontent.com/briannaeskin/StatModelingComputingSpring2021/main/heart_failure_clinical_records_dataset.csv", 
                           header=TRUE)
 
-trainIndex <- createDataPartition(heart_disease$DEATH_EVENT, p=0.75, list=FALSE, times=1)
+trainIndex <- createDataPartition(heart_disease$DEATH_EVENT, p=0.70, list=FALSE, times=1)
 
 heart_disease_train <- heart_disease[trainIndex,]
 heart_disease_test <- heart_disease[-trainIndex,]
@@ -24,21 +26,21 @@ heart_disease_test_pred <- heart_disease_test %>%
   mutate(accurate=1*(predict==DEATH_EVENT))
 sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
 
-#Second check, logistic regression with AIC
-heart_disease_train_AIC <- regsubsets(DEATH_EVENT ~ ., data=heart_disease_train)
-heart_disease_train_AIC_sum <- summary(heart_disease_train_AIC)
-heart_disease_train_AIC_sum$which
-AIC <- 210*log(heart_disease_train_AIC_sum$rss/210)+(2:12)*2
-plot(AIC ~ I(1:11), ylab="AIC", xlab="Number of Predictors")
-which.min(AIC)
+#Second check, logistic regression with BIC
+heart_disease_train_BIC <- regsubsets(DEATH_EVENT ~ ., data=heart_disease_train)
+heart_disease_train_BIC_sum <- summary(heart_disease_train_BIC)
+heart_disease_train_BIC_sum$which
+plot(heart_disease_train_BIC_sum$bic, ylab="BIC", xlab="Number of Predictors")
+which.min(heart_disease_train_BIC_sum$bic)
 
-lmod_filtered <- glm(DEATH_EVENT ~ age + creatinine_phosphokinase + ejection_fraction + serum_creatinine + serum_sodium + time,
+lmod_filtered <- glm(DEATH_EVENT ~ ejection_fraction + serum_creatinine + time,
                      family=binomial, heart_disease_train)
 summary(lmod_filtered)
 
 lmod_filtered_prob <- predict(lmod_filtered, heart_disease_test, type="response")
+optCutoff <- optimalCutoff(heart_disease_test$DEATH_EVENT,lmod_filtered_prob)
 heart_disease_test_pred <- heart_disease_test %>%
-  mutate(predict=1*(lmod_filtered_prob > 0.5)) %>%
+  mutate(predict=1*(lmod_filtered_prob > optCutoff)) %>%
   mutate(accurate=1*(predict==DEATH_EVENT))
 sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
 
