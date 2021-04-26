@@ -92,3 +92,11 @@ heart_disease_knn <- knn(train=heart_disease_train_filtered_x,
 
 1-calc_error(heart_disease_test_filtered_y,heart_disease_knn)
 #87.64%
+
+confusion_matrix_filtered_knn <- as.data.frame(table(heart_disease_test_filtered_y,heart_disease_knn))
+ggplot(data=confusion_matrix_filtered_knn, mapping=aes(x=heart_disease_knn,y=heart_disease_test_filtered_y)) +
+  geom_tile(aes(fill=Freq), color = "white") +
+  geom_text(aes(label=sprintf("%1.0f", Freq)), vjust=1) +
+  scale_fill_gradient(low="steelblue", high="red") +
+  theme_bw() + theme(legend.position="none") +
+  xlab("Predicted") + ylab("Actual") + ggtitle("Predicted versus Actual - KNN")
