@@ -1,6 +1,9 @@
 install.packages("caret")
+install.packages("class")
 install.packages("InformationValue")
 library("caret")
+library("class")
+library("faraway")
 library("InformationValue")
 library("leaps")
 library("tidyverse")
@@ -16,17 +19,7 @@ trainIndex <- createDataPartition(heart_disease$DEATH_EVENT, p=0.70, list=FALSE,
 heart_disease_train <- heart_disease[trainIndex,]
 heart_disease_test <- heart_disease[-trainIndex,]
 
-#First check, logistic regression with all variables
-lmod_all <- glm(DEATH_EVENT ~ ., family=binomial, heart_disease_train)
-summary(lmod_all)
-
-lmod_all_prob <- predict(lmod_all, heart_disease_test, type="response")
-heart_disease_test_pred <- heart_disease_test %>%
-  mutate(predict=1*(lmod_all_prob > 0.5)) %>%
-  mutate(accurate=1*(predict==DEATH_EVENT))
-sum(heart_disease_test_pred$accurate)/nrow(heart_disease_test_pred)
-
-#Second check, logistic regression with BIC
+#Logistic regression with BIC model selection
 heart_disease_train_BIC <- regsubsets(DEATH_EVENT ~ ., data=heart_disease_train)
 heart_disease_train_BIC_sum <- summary(heart_disease_train_BIC)
 heart_disease_train_BIC_sum$which
@@ -48,7 +41,54 @@ confusion_matrix_filtered <- as.data.frame(table(heart_disease_test_pred$DEATH_E
 ggplot(data=confusion_matrix_filtered, mapping=aes(x=Var1,y=Var2)) +
   geom_tile(aes(fill=Freq), color = "white") +
   geom_text(aes(label=sprintf("%1.0f", Freq)), vjust=1) +
-  scale_fill_gradient(low="blue", high="red") +
+  scale_fill_gradient(low="steelblue", high="red") +
   theme_bw() + theme(legend.position="none") +
   xlab("Predicted") + ylab("Actual") + ggtitle("Predicted versus Actual")
-  
+
+
+
+#KNN with filtered model
+heart_disease_train_filtered_x <- heart_disease_train %>%
+  select(ejection_fraction,serum_creatinine,time)
+heart_disease_train_filtered_y <- heart_disease_train_y
+heart_disease_test_filtered_x <- heart_disease_test %>%
+  select(ejection_fraction,serum_creatinine,time)
+heart_disease_test_filtered_y <- heart_disease_test_y
+
+#Calculate error
+calc_error <- function(actual, predicted){
+  error <- mean(actual != predicted)
+  return(error)
+}
+
+#Determine k
+ks = 1:20
+errors <- rep(x=0, times=length(ks))
+
+for (i in seq_along(ks)) {
+  prediction <- knn(train=heart_disease_train_filtered_x,
+                    test=heart_disease_test_filtered_x,
+                    cl=heart_disease_train_filtered_y,
+                    k=ks[i])
+  errors[i] <- calc_error(heart_disease_test_filtered_y, prediction)
+}
+
+plot(errors, type = "b", col = "dodgerblue", cex = 1, pch = 20, 
+     xlab = "k, number of neighbors", ylab = "Classification Error",
+     main = "(Test) Error Rate vs Neighbors")
+# add line for min error seen
+abline(h = min(errors), col = "darkorange", lty = 3)
+# add line for minority prevalence in test set
+abline(h = mean(heart_disease_test_filtered_y == 1), col = "grey", lty = 2)
+
+min(errors)
+which(errors == min(errors))
+
+
+heart_disease_knn <- knn(train=heart_disease_train_filtered_x,
+                         test=heart_disease_test_filtered_x,
+                         cl=heart_disease_train_filtered_y,
+                         k=10)
+
+1-calc_error(heart_disease_test_filtered_y,heart_disease_knn)
+#87.64%
