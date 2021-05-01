@@ -1,11 +1,13 @@
 install.packages("caret")
 install.packages("class")
 install.packages("InformationValue")
+install.packages("randomForest")
 library("caret")
 library("class")
 library("faraway")
 library("InformationValue")
 library("leaps")
+library("randomForest")
 library("tidyverse")
 
 set.seed(9999)
@@ -100,3 +102,22 @@ ggplot(data=confusion_matrix_filtered_knn, mapping=aes(x=heart_disease_knn,y=hea
   scale_fill_gradient(low="steelblue", high="red") +
   theme_bw() + theme(legend.position="none") +
   xlab("Predicted") + ylab("Actual") + ggtitle("Predicted versus Actual - KNN")
+
+
+#Random Forest
+random_forest_model <- randomForest(formula=as.factor(DEATH_EVENT) ~ ejection_fraction + serum_creatinine + time, data=heart_disease_train)
+
+
+heart_disease_test_pred_rf <- heart_disease_test %>%
+  mutate(pred = predict(random_forest_model, heart_disease_test))%>%
+  mutate(accurate=1*(pred==DEATH_EVENT))
+sum(heart_disease_test_pred_rf$accurate)/nrow(heart_disease_test_pred_rf)
+
+confusion_matrix_rf <- as.data.frame(table(heart_disease_test_pred_rf$DEATH_EVENT,heart_disease_test_pred_rf$pred))
+ggplot(data=confusion_matrix_rf, mapping=aes(x=Var1,y=Var2)) +
+  geom_tile(aes(fill=Freq), color = "white") +
+  geom_text(aes(label=sprintf("%1.0f", Freq)), vjust=1) +
+  scale_fill_gradient(low="steelblue", high="red") +
+  theme_bw() + theme(legend.position="none") +
+  xlab("Predicted") + ylab("Actual") + ggtitle("Predicted versus Actual - Random Forest")
+
